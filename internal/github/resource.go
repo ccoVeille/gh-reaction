@@ -50,9 +50,9 @@ func (d Time) String() string {
 }
 
 type Reaction struct {
-	User    User   `json:"user"`
-	Content string `json:"content"`
-	Created Time   `json:"created_at"`
+	User      User   `json:"user"`
+	Content   string `json:"content"`
+	CreatedAt Time   `json:"created_at"`
 }
 
 func (r Reaction) Type() string {
