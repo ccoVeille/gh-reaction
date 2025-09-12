@@ -13,13 +13,14 @@ func ConvertDuration(d time.Duration) string {
 	if d < 0 {
 		return "in the future"
 	}
-	if d < time.Minute {
+	if d < 2*time.Minute {
 		return fmt.Sprintf("%d seconds ago", int(d.Seconds()))
 	}
-	if d < time.Hour {
+	if d < 2*time.Hour {
 		return fmt.Sprintf("%d minutes ago", int(d.Minutes()))
 	}
-	if d < 24*time.Hour {
+
+	if d < 48*time.Hour {
 		return fmt.Sprintf("%d hours ago", int(d.Hours()))
 	}
 

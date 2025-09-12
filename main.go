@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -221,7 +222,7 @@ func (r *Reactions) Clean() {
 	})
 
 	slices.SortFunc(clean, func(r1, r2 ReactionTo) int {
-		return r1.Reaction.Created.Compare(r2.Reaction.Created.Time)
+		return r1.Reaction.CreatedAt.Compare(r2.Reaction.CreatedAt.Time)
 	})
 
 	*r = clean
@@ -348,10 +349,7 @@ func run(ctx context.Context) error {
 
 	logger := slog.Default()
 
-	logger.Info("Looking for reactions on user posts",
-		"repository_owner", repo.Owner,
-		"repository_name", repo.Name,
-		"user", currentUser)
+	fmt.Printf("Analyzing posts for reactions on github.com/%s/%s\n", repo.Owner, repo.Name)
 
 	var minDate github.Time
 	minDate = github.Time{Time: time.Now().AddDate(0, -1, 0)}
@@ -362,11 +360,11 @@ func run(ctx context.Context) error {
 	}
 
 	if len(posts) == 0 {
-		logger.Warn("Fetched no recent posts", "since", minDate.String())
+		fmt.Println("No posts found since", minDate.String())
 		return nil
 	}
 
-	logger.Info("Fetched posts", "total", len(posts), "since", minDate.String())
+	fmt.Printf("Fetched %d posts since %s\n", len(posts), minDate.String())
 
 	// Keep only posts authored by the current user
 	userPosts := slices.DeleteFunc(posts, func(a Post) bool {
@@ -379,17 +377,16 @@ func run(ctx context.Context) error {
 
 	var allReactions Reactions
 
-	logger.Info("Fetched user posts", "total", len(userPosts), "since", minDate.String(), "user", currentUser)
+	fmt.Printf("Fetched %d %s posts since %s\n", len(userPosts), currentUser, minDate.String())
 
 	const maxUserPost = 100
 	if len(userPosts) > maxUserPost {
 		userPosts = userPosts[:maxUserPost]
-		logger.Warn("Truncated user posts", "max_size", maxUserPost)
-		logger.Info("Fetched user posts", "total", len(userPosts), "since", minDate.String(), "user", currentUser)
+		fmt.Printf("Restricting to %d %s posts since %s\n", len(userPosts), currentUser, minDate.String())
 	}
 
-	spinner := spinner.New("fetched %d post reactions…")
-	spinner.Start(ctx, os.Stdout)
+	spinner := spinner.New(os.Stdout, "fetched %d post reactions")
+	spinner.Start(ctx)
 	for _, post := range userPosts {
 		spinner.Inc()
 		reactions, err := post.FetchReactions(ctx, client, repo)
@@ -403,47 +400,42 @@ func run(ctx context.Context) error {
 
 	allReactions.Clean()
 
-	if len(allReactions) == 0 {
-		logger.Info("No reactions found on the period", "since", minDate.String(), "user", currentUser)
+	fmt.Println("Stats since", minDate)
+	fmt.Println(len(posts), "messages on repository")
+	fmt.Println(len(userPosts), "messages from user")
+	postsWithReactions := allReactions.Posts()
+	fmt.Println(len(postsWithReactions), "messages with reactions")
+	fmt.Println()
+
+	if len(postsWithReactions) == 0 {
 		return nil
 	}
 
-	fmt.Println("Since:", minDate)
-	fmt.Println("Total messages:", len(posts))
-	fmt.Println("Total messages from user:", len(userPosts))
-	fmt.Println()
-
-	postsWithReactions := allReactions.Posts()
-	fmt.Println("Total messages with reactions:", len(postsWithReactions))
 	topPosts := postsWithReactions.Top(5)
 	if len(postsWithReactions) > len(topPosts) {
-		fmt.Println("Top message with reactions:")
+		fmt.Println("Top messages with reactions:")
+	} else {
+		fmt.Println("Last messages with reactions:")
 	}
 
 	maxSizeCount := topPosts.MaxSizeCount()
 	for _, post := range topPosts {
-		fmt.Printf("%.*d reactions: %s\n", maxSizeCount, post.Count, post.Value.Link)
+		fmt.Printf("%.*s reactions: %s\n", maxSizeCount, strconv.Itoa(post.Count), post.Value.Link)
 	}
 	fmt.Println()
 
-	fmt.Println("Total reactions:", len(allReactions))
+	var reactionDetails []string
 	topReactions := allReactions.Reactions()
-	fmt.Print("Top reactions: ")
-	maxSizeCount = topReactions.MaxSizeCount()
-
-	for i, reaction := range topReactions {
-		if i > 0 {
-			fmt.Print(", ")
-		}
-		fmt.Printf("%.*d %s", maxSizeCount, reaction.Count, reaction.Value)
+	for _, reaction := range topReactions {
+		reactionDetails = append(reactionDetails, fmt.Sprintf("%d: %s", reaction.Count, reaction.Value))
 	}
-	fmt.Print("\n\n")
+	fmt.Printf("Total reactions: %d (%s)\n\n", len(allReactions), strings.Join(reactionDetails, " "))
 
 	users := allReactions.Users()
 	fmt.Println("Total users who reacted:", len(users))
 	topUsers := users.Top(5)
 	if len(users) > len(topUsers) {
-		fmt.Println("Top users who reacted:")
+		fmt.Println("\nTop users who reacted:")
 	}
 
 	maxSizeCount = topUsers.MaxSizeCount()
@@ -455,22 +447,21 @@ func run(ctx context.Context) error {
 	})
 
 	for _, user := range topUsers {
-		fmt.Printf("%.*d %-*s %s\n", maxSizeCount, user.Count, maxSizeLogin, user.Value, user.Value.GitHubURL())
+		fmt.Printf("%*s %-*s %s\n", maxSizeCount, strconv.Itoa(user.Count), maxSizeLogin, user.Value, user.Value.GitHubURL())
 	}
 	fmt.Println()
 
+	fmt.Println("Recent reactions:")
 	for _, reaction := range allReactions {
 
-		fmt.Printf("%s %s reacted with %s to:\n",
-			reaction.Reaction.Created,
-			reaction.Reaction.User,
-			reaction.Reaction.Type())
-
-		fmt.Printf("  Message: %s\n", reaction.Post.ContentPreview())
-		fmt.Printf("  Message Type: %s\n", reaction.Post.Type)
-		fmt.Printf("  Author: %s\n", reaction.Post.Author)
-		fmt.Printf("  Posted: %s\n", reaction.Post.Date)
-		fmt.Printf("  Link: %s\n", reaction.Post.Link)
+		fmt.Printf("When:         %s (%s)\n", reaction.Reaction.CreatedAt.Format(time.DateOnly), reaction.Reaction.CreatedAt)
+		fmt.Printf("Who:          %s\n", reaction.Reaction.User)
+		fmt.Printf("With:         %s\n", reaction.Reaction.Type())
+		fmt.Printf("Message:      %s\n", reaction.Post.ContentPreview())
+		fmt.Printf("Message Type: %s\n", reaction.Post.Type)
+		fmt.Printf("Author:       %s\n", reaction.Post.Author)
+		fmt.Printf("Posted:       %s\n", reaction.Post.Date)
+		fmt.Printf("Link:         %s\n", reaction.Post.Link)
 		fmt.Println()
 	}
 

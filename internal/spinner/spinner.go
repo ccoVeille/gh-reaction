@@ -7,13 +7,16 @@ import (
 )
 
 type Spinner struct {
+	cnt    int
+	out    io.Writer
 	format string
 	done   chan struct{}
 	tick   chan struct{}
 }
 
-func New(format string) *Spinner {
+func New(out io.Writer, format string) *Spinner {
 	s := &Spinner{
+		out:    out,
 		format: format,
 		done:   make(chan struct{}),
 		tick:   make(chan struct{}),
@@ -21,10 +24,9 @@ func New(format string) *Spinner {
 	return s
 }
 
-func (s *Spinner) Start(ctx context.Context, out io.Writer) {
+func (s *Spinner) Start(ctx context.Context) {
 	spinningCharacters := []rune("⣾⣽⣻⢿⡿⣟⣯⣷")
 	go func() {
-		var i int
 		for {
 			select {
 			case <-s.done:
@@ -33,11 +35,10 @@ func (s *Spinner) Start(ctx context.Context, out io.Writer) {
 			case <-ctx.Done():
 				return
 			case <-s.tick:
-				i++
-				pos := i % len(spinningCharacters)
-
-				fmt.Fprint(out, "\r"+string(spinningCharacters[pos]))
-				fmt.Fprintf(out, " "+s.format, i)
+				s.cnt++
+				pos := s.cnt % len(spinningCharacters)
+				fmt.Fprint(s.out, "\r"+string(spinningCharacters[pos]))
+				fmt.Fprintf(s.out, " "+s.format+"…", s.cnt)
 			}
 		}
 	}()
@@ -48,6 +49,7 @@ func (s *Spinner) Inc() {
 }
 
 func (s *Spinner) Done() {
+	fmt.Fprintf(s.out, "\r"+s.format+"       \n\n", s.cnt)
 	close(s.done)
 	close(s.tick)
 }
