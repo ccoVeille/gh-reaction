@@ -20,7 +20,7 @@ func ConvertDuration(d time.Duration) string {
 		return fmt.Sprintf("%d minutes ago", int(d.Minutes()))
 	}
 
-	if d < 48*time.Hour {
+	if d < 49*time.Hour {
 		return fmt.Sprintf("%d hours ago", int(d.Hours()))
 	}
 
@@ -28,11 +28,11 @@ func ConvertDuration(d time.Duration) string {
 	// but it is enough for our needs
 	days := int(d.Hours() / 24)
 
-	if days < 14 {
+	if days < 22 {
 		return fmt.Sprintf("%d days ago", days)
 	}
 
-	if days < 2*30 {
+	if days < 31*2 {
 		return fmt.Sprintf("%d weeks ago", days/7)
 	}
 

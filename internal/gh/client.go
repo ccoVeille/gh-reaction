@@ -1,4 +1,3 @@
-// Package client is a context-aware HTTP client for interacting with the GitHub API.
 package gh
 
 import (

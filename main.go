@@ -4,8 +4,8 @@ import (
 	"cmp"
 	"context"
 	"errors"
+	"flag"
 	"fmt"
-	"log/slog"
 	"maps"
 	"math"
 	"net/url"
@@ -19,6 +19,7 @@ import (
 	"github.com/ccoVeille/gh-reaction/internal/gh"
 	"github.com/ccoVeille/gh-reaction/internal/github"
 	"github.com/ccoVeille/gh-reaction/internal/spinner"
+	"github.com/ccoVeille/gh-reaction/internal/timeago"
 )
 
 type PostType string
@@ -108,7 +109,7 @@ func truncateString(content string, maxLen int) string {
 }
 
 // Fetch messages posted by the user in the current repository
-func fetchPosts(ctx context.Context, client *gh.RESTClient, gitHubRepo gh.Repository, minDate github.Time) ([]Post, error) {
+func fetchPosts(ctx context.Context, client *gh.RESTClient, gitHubRepo gh.Repository, minDate time.Time) ([]Post, error) {
 	var posts []Post
 
 	// Fetch issues and PRs created by the user in the repository
@@ -330,15 +331,39 @@ type ReactionTo struct {
 	Post     Post
 }
 
+func parseCLIOptions() (cliOptions, error) {
+	var opts cliOptions
+	fl := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+
+
+	fl.StringVar(&opts.author, "author", "", "Limit to messages authored by this GitHub username")
+	fl.IntVar(&opts.limit, "limit", 50, "Maximum number of messages to fetch")
+
+	defaultSinceDaysAgo := 90
+	fl.Var(&opts.since, "since", fmt.Sprintf(`Fetch messages since this date (e.g., "2023-01-02", "2h", "15m", "3d" ...) (default "%dd")`, defaultSinceDaysAgo))
+
+
+	fl.Usage = func() {
+		// add a simple --help flag
+		fmt.Print("Available Flags:\n")
+		fl.PrintDefaults()
+	}
+	err := fl.Parse(os.Args[1:])
+	if err != nil {
+		return opts, err
+	}
+
+	if opts.since.IsZero() {
+		opts.since = timeago.RelativeDate{Time: time.Now().AddDate(0, 0, -defaultSinceDaysAgo)}
+	}
+	opts.since.Time = opts.since.Time.Truncate(time.Hour).UTC()
+
+	return opts, nil
+}
+
 func run(ctx context.Context) error {
 	client, err := gh.DefaultRESTClient()
 	if err != nil {
-		return err
-	}
-
-	// Fetch current user info
-	var currentUser github.User
-	if err := client.Get(ctx, "user", &currentUser); err != nil {
 		return err
 	}
 
@@ -347,62 +372,65 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	logger := slog.Default()
-
-	fmt.Printf("Analyzing posts for reactions on github.com/%s/%s\n", repo.Owner, repo.Name)
-
-	var minDate github.Time
-	minDate = github.Time{Time: time.Now().AddDate(0, -1, 0)}
-
-	posts, err := fetchPosts(ctx, client, repo, minDate)
+	opts, err := parseCLIOptions()
 	if err != nil {
 		return err
 	}
 
-	if len(posts) == 0 {
-		fmt.Println("No posts found since", minDate.String())
+	since := opts.since
+
+	fmt.Printf("Looking for posts on github.com/%s/%s since %s", repo.Owner, repo.Name, since.String())
+	allPosts, err := fetchPosts(ctx, client, repo, since.Time)
+	if err != nil {
+		return err
+	}
+
+	if len(allPosts) == 0 {
+		fmt.Println("\nNo posts found since ", since.String())
 		return nil
 	}
 
-	fmt.Printf("Fetched %d posts since %s\n", len(posts), minDate.String())
+	fmt.Printf("\r✔️ Fetched %d posts on the repository since %s", len(allPosts), since.String())
+	fmt.Print("                 ") // filler for the \r
+	fmt.Println()
 
-	// Keep only posts authored by the current user
-	userPosts := slices.DeleteFunc(posts, func(a Post) bool {
-		if a.Author.Login == nil || currentUser.Login == nil {
-			return false
-		}
+	posts := allPosts
+	if opts.author != "" {
+		// Keep only posts authored by the current user
+		posts = slices.DeleteFunc(posts, func(a Post) bool {
+			if a.Author.Login == nil {
+				return false
+			}
 
-		return *a.Author.Login != *currentUser.Login
-	})
-
-	var allReactions Reactions
-
-	fmt.Printf("Fetched %d %s posts since %s\n", len(userPosts), currentUser, minDate.String())
-
-	const maxUserPost = 100
-	if len(userPosts) > maxUserPost {
-		userPosts = userPosts[:maxUserPost]
-		fmt.Printf("Restricting to %d %s posts since %s\n", len(userPosts), currentUser, minDate.String())
+			return !strings.EqualFold(*a.Author.Login, opts.author)
+		})
+		fmt.Printf("Limited analysis to %d %s posts\n", len(posts), opts.author)
 	}
 
-	spinner := spinner.New(os.Stdout, "fetched %d post reactions")
+	if opts.limit > 0 && len(posts) > opts.limit {
+		posts = posts[:opts.limit]
+		fmt.Printf("Limited analysis to latest %d posts\n", len(posts))
+	}
+
+	spinner := spinner.New(os.Stdout, fmt.Sprintf("fetched reactions on %%d/%d posts", len(posts)))
 	spinner.Start(ctx)
-	for _, post := range userPosts {
+
+	var allReactions Reactions
+	for _, post := range posts {
 		spinner.Inc()
 		reactions, err := post.FetchReactions(ctx, client, repo)
 		if err != nil {
 			return err
 		}
 		allReactions.Append(reactions...)
-		logger.Debug("Fetched reactions for post", "total", len(reactions), "link", post.Link)
 	}
 	spinner.Done()
 
 	allReactions.Clean()
 
-	fmt.Println("Stats since", minDate)
-	fmt.Println(len(posts), "messages on repository")
-	fmt.Println(len(userPosts), "messages from user")
+	fmt.Println("Stats since", since)
+	fmt.Println(len(allPosts), "messages on repository")
+	fmt.Println(len(posts), "analyzed messages")
 	postsWithReactions := allReactions.Posts()
 	fmt.Println(len(postsWithReactions), "messages with reactions")
 	fmt.Println()
@@ -468,12 +496,20 @@ func run(ctx context.Context) error {
 	return nil
 }
 
+type cliOptions struct {
+	author string
+	limit  int
+	since  timeago.RelativeDate
+}
+
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
 	err := run(ctx)
 	switch {
+	case errors.Is(err, flag.ErrHelp):
+		// nothing to do, the help message has already been displayed
 	case errors.Is(err, context.Canceled) && ctx.Err() != nil:
 		// handle the CTRL+C case silently
 		os.Exit(130) // classic exit code for a SIGINT (Ctrl+C) termination

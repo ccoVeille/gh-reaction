@@ -49,7 +49,7 @@ func (s *Spinner) Inc() {
 }
 
 func (s *Spinner) Done() {
-	fmt.Fprintf(s.out, "\r"+s.format+"       \n\n", s.cnt)
+	fmt.Fprintf(s.out, "\r✔️ "+s.format+"       \n\n", s.cnt)
 	close(s.done)
 	close(s.tick)
 }
