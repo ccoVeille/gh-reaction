@@ -1,6 +1,7 @@
 package github
 
 import (
+	"strings"
 	"time"
 
 	"github.com/google/go-github/v74/github"
@@ -23,7 +24,13 @@ func (u User) IsBot() bool {
 	if u.Login == nil {
 		return false
 	}
-	return *u.Login == "dependabot[bot]"
+
+	switch strings.ToLower(*u.Login) {
+	case "dependabot[bot]", "github-actions[bot]", "renovate[bot]", "codecov-commenter":
+		return true
+	}
+
+	return false
 }
 
 func (u User) String() string {
