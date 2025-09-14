@@ -13,6 +13,10 @@ type RelativeDate struct {
 	time.Time
 }
 
+func NewRelativeDate(t time.Time) RelativeDate {
+	return RelativeDate{Time: t}
+}
+
 func (r RelativeDate) String() string {
 	return fmt.Sprintf("%v (%v)", r.Time.Format(time.RFC3339), Convert(r.Time))
 }
