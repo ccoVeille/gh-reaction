@@ -26,7 +26,13 @@ func (u User) IsBot() bool {
 	}
 
 	switch strings.ToLower(*u.Login) {
-	case "dependabot[bot]", "github-actions[bot]", "renovate[bot]", "codecov-commenter":
+	case
+		"coderabbitai[bot]",
+		"dependabot[bot]",
+		"github-actions[bot]",
+		"renovate[bot]", // renovate is the old name for mend
+		"mend[bot]",     // mend is the new name for renovate
+		"codecov-commenter":
 		return true
 	}
 
