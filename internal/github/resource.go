@@ -29,7 +29,8 @@ func (u User) IsBot() bool {
 	case
 		"dependabot[bot]",
 		"github-actions[bot]",
-		"renovate[bot]",
+		"renovate[bot]", // renovate is the old name for mend
+		"mend[bot]",     // mend is the new name for renovate
 		"codecov-commenter":
 		return true
 	}
