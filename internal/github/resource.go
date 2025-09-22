@@ -27,6 +27,7 @@ func (u User) IsBot() bool {
 
 	switch strings.ToLower(*u.Login) {
 	case
+		"coderabbitai[bot]",
 		"dependabot[bot]",
 		"github-actions[bot]",
 		"renovate[bot]", // renovate is the old name for mend
