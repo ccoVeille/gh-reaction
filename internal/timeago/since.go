@@ -23,7 +23,7 @@ func NewRelativeDate(t time.Time) RelativeDate {
 //
 // It satisfies the [flag.Value] and [fmt.Stringer] interface.
 func (r RelativeDate) String() string {
-	return fmt.Sprintf("%v (%v)", r.Time.Format(time.RFC3339), Convert(r.Time))
+	return fmt.Sprintf("%v (%v)", r.Format(time.RFC3339), Convert(r.Time))
 }
 
 // Set sets the RelativeDate from a string value.

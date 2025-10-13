@@ -39,23 +39,23 @@ type Post struct {
 	ID      string
 }
 
-func (a Post) FetchReactions(ctx context.Context, client *gh.RESTClient, repo gh.Repository) (Reactions, error) {
-	var url string
-	if a.Type == PostTypeComment {
-		url = fmt.Sprintf("repos/%s/%s/issues/comments/%s/reactions?per_page=100", repo.Owner, repo.Name, a.ID)
+func (p Post) FetchReactions(ctx context.Context, client *gh.RESTClient, repo gh.Repository) (Reactions, error) {
+	var uri string
+	if p.Type == PostTypeComment {
+		uri = fmt.Sprintf("repos/%s/%s/issues/comments/%s/reactions?per_page=100", repo.Owner, repo.Name, p.ID)
 	} else {
-		url = fmt.Sprintf("repos/%s/%s/issues/%s/reactions?per_page=100", repo.Owner, repo.Name, a.ID)
+		uri = fmt.Sprintf("repos/%s/%s/issues/%s/reactions?per_page=100", repo.Owner, repo.Name, p.ID)
 	}
 
 	var reactions []github.Reaction
-	if err := client.Get(ctx, url, &reactions); err != nil {
+	if err := client.Get(ctx, uri, &reactions); err != nil {
 		return nil, err
 	}
 
 	var results Reactions
 	for _, reaction := range reactions {
 		results = append(results, ReactionTo{
-			Post:     a,
+			Post:     p,
 			Reaction: reaction,
 		})
 	}
@@ -63,8 +63,8 @@ func (a Post) FetchReactions(ctx context.Context, client *gh.RESTClient, repo gh
 	return results, nil
 }
 
-func (a Post) ContentPreview() string {
-	content := a.Content
+func (p Post) ContentPreview() string {
+	content := p.Content
 	for _, l := range strings.Split(content, "\n") {
 		if strings.HasPrefix(l, ">") {
 			// Skip quoted lines
@@ -82,7 +82,7 @@ func (a Post) ContentPreview() string {
 	}
 
 	const maxLen = 100
-	if content == a.Content {
+	if content == p.Content {
 		return truncateString(content, maxLen)
 	}
 	return truncateString(content, maxLen)
@@ -132,7 +132,7 @@ func fetchPosts(ctx context.Context, client *gh.RESTClient, gitHubRepo gh.Reposi
 		}{}
 
 		q := url.Values{
-			"page":      []string{fmt.Sprint(page)},
+			"page":      []string{strconv.Itoa(page)},
 			"per_page":  []string{"100"},
 			"sort":      []string{"commented"},
 			"direction": []string{"desc"},
@@ -142,8 +142,8 @@ func fetchPosts(ctx context.Context, client *gh.RESTClient, gitHubRepo gh.Reposi
 			q.Set("since", minDate.Format(time.RFC3339))
 		}
 
-		url := fmt.Sprintf("repos/%s/%s/issues?%s", gitHubRepo.Owner, gitHubRepo.Name, q.Encode())
-		if err := client.Get(ctx, url, &userIssues); err != nil {
+		uri := fmt.Sprintf("repos/%s/%s/issues?%s", gitHubRepo.Owner, gitHubRepo.Name, q.Encode())
+		if err := client.Get(ctx, uri, &userIssues); err != nil {
 			return nil, err
 		}
 		if len(userIssues) == 0 {
@@ -161,7 +161,7 @@ func fetchPosts(ctx context.Context, client *gh.RESTClient, gitHubRepo gh.Reposi
 				Content: issue.Title,
 				Author:  issue.Author,
 				Link:    fmt.Sprintf("https://github.com/%s/%s/issues/%d", gitHubRepo.Owner, gitHubRepo.Name, issue.Number),
-				ID:      fmt.Sprintf("%d", issue.Number),
+				ID:      strconv.Itoa(issue.Number),
 			})
 			spin.Progress("fetched %d posts", len(posts))
 		}
@@ -190,8 +190,8 @@ func fetchPosts(ctx context.Context, client *gh.RESTClient, gitHubRepo gh.Reposi
 			q.Set("since", minDate.Format(time.RFC3339))
 		}
 
-		url := fmt.Sprintf("repos/%s/%s/issues/comments?page=%d&%s", gitHubRepo.Owner, gitHubRepo.Name, page, q.Encode())
-		if err := client.Get(ctx, url, &userComments); err != nil {
+		uri := fmt.Sprintf("repos/%s/%s/issues/comments?page=%d&%s", gitHubRepo.Owner, gitHubRepo.Name, page, q.Encode())
+		if err := client.Get(ctx, uri, &userComments); err != nil {
 			return nil, err
 		}
 		if len(userComments) == 0 {
@@ -204,7 +204,7 @@ func fetchPosts(ctx context.Context, client *gh.RESTClient, gitHubRepo gh.Reposi
 				Content: comment.Body,
 				Author:  comment.Author,
 				Link:    comment.Link,
-				ID:      fmt.Sprintf("%d", comment.ID),
+				ID:      strconv.Itoa(comment.ID),
 			})
 			spin.Progress("fetched %d posts", len(posts))
 		}
@@ -408,7 +408,7 @@ func parseCLIOptions() (cliOptions, error) {
 	return opts, nil
 }
 
-func run(ctx context.Context) error {
+func execute(ctx context.Context) error {
 	client, err := gh.DefaultRESTClient()
 	if err != nil {
 		return err
@@ -457,19 +457,19 @@ func run(ctx context.Context) error {
 		fmt.Printf("⚠️ Limited analysis to latest %d posts since %s\n", len(posts), since.String())
 	}
 
-	spinner := spinner.New(os.Stdout)
-	spinner.Start(ctx, "fetching %d reactions on posts")
+	sp := spinner.New(os.Stdout)
+	sp.Start(ctx, "fetching %d reactions on posts")
 
 	var allReactions Reactions
 	for i, post := range posts {
-		spinner.Progress("checking reactions on posts %d/%d: %d reactions found", i, len(posts), len(allReactions))
+		sp.Progress("checking reactions on posts %d/%d: %d reactions found", i, len(posts), len(allReactions))
 		reactions, err := post.FetchReactions(ctx, client, repo)
 		if err != nil {
 			return err
 		}
 		allReactions.Append(reactions...)
 	}
-	spinner.Done("✔️ fetched reactions on %d posts: %d reactions found", len(posts), len(allReactions))
+	sp.Done("✔️ fetched reactions on %d posts: %d reactions found", len(posts), len(allReactions))
 
 	allReactions.Clean()
 
@@ -564,20 +564,35 @@ type cliOptions struct {
 	since  timeago.RelativeDate
 }
 
-func main() {
+type exitCode = int
+
+const (
+	exitSuccess = exitCode(0)
+	exitError   = exitCode(1)
+
+	exitCanceled = exitCode(130) // classic exit code for a SIGINT (Ctrl+C) termination
+)
+
+func run() exitCode {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	err := run(ctx)
+	err := execute(ctx)
 	switch {
 	case errors.Is(err, flag.ErrHelp):
 		// nothing to do, the help message has already been displayed
+		return exitSuccess
 	case errors.Is(err, context.Canceled) && ctx.Err() != nil:
 		// handle the CTRL+C case silently
-		os.Exit(130) // classic exit code for a SIGINT (Ctrl+C) termination
-
+		return exitCanceled
 	case err != nil:
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1) // return a non-zero exit code for any other error
+		return exitError
 	}
+
+	return exitSuccess
+}
+
+func main() {
+	os.Exit(run())
 }
