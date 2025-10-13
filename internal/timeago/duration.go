@@ -5,10 +5,12 @@ import (
 	"time"
 )
 
+// Convert converts a [time.Time] into a human-readable relative time string.
 func Convert(t time.Time) string {
 	return ConvertDuration(time.Since(t))
 }
 
+// ConvertDuration converts a [time.Duration] into a human-readable relative time string.
 func ConvertDuration(d time.Duration) string {
 	if d < 0 {
 		return "in the future"
