@@ -95,7 +95,7 @@ func TestParseDate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := parseDate(tt.input)
 			if err == nil {
-				t.Errorf("expected error, got nil")
+				t.Error("expected error, got nil")
 			} else if !errors.Is(err, ErrUnsupportedDateFormat) {
 				t.Errorf("expected error %v, got %v", ErrUnsupportedDateFormat, err)
 			}
