@@ -1,3 +1,4 @@
+// Package main implements a CLI tool to analyze GitHub reactions on your posts (issues, PRs, comments).
 package main
 
 import (

@@ -9,18 +9,26 @@ import (
 	"time"
 )
 
+// RelativeDate is a wrapper around [time.Time] that provides a custom string representation.
 type RelativeDate struct {
 	time.Time
 }
 
+// NewRelativeDate creates a new RelativeDate instance.
 func NewRelativeDate(t time.Time) RelativeDate {
 	return RelativeDate{Time: t}
 }
 
+// String returns the string representation of the RelativeDate.
+//
+// It satisfies the [flag.Value] and [fmt.Stringer] interface.
 func (r RelativeDate) String() string {
 	return fmt.Sprintf("%v (%v)", r.Time.Format(time.RFC3339), Convert(r.Time))
 }
 
+// Set sets the RelativeDate from a string value.
+//
+// It satisfies the [flag.Value] interface.
 func (r *RelativeDate) Set(value string) error {
 	t, err := parseDate(value)
 	if err != nil {
@@ -32,6 +40,7 @@ func (r *RelativeDate) Set(value string) error {
 
 var _ flag.Value = (*RelativeDate)(nil)
 
+// ErrUnsupportedDateFormat is returned when the provided date format is not supported.
 var ErrUnsupportedDateFormat = errors.New("unsupported date format")
 
 func parseDate(analyzed string) (time.Time, error) {

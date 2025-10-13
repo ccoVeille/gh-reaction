@@ -9,10 +9,12 @@ import (
 	"github.com/ccoVeille/gh-reaction/internal/timeago"
 )
 
+// User wraps github.User to provide additional methods.
 type User struct {
 	github.User
 }
 
+// GitHubURL returns the URL to the user's GitHub profile.
 func (u User) GitHubURL() string {
 	if u.Login == nil {
 		return ""
@@ -20,6 +22,7 @@ func (u User) GitHubURL() string {
 	return "https://github.com/" + *u.Login
 }
 
+// IsBot reports whether the user is a bot account.
 func (u User) IsBot() bool {
 	if u.Login == nil {
 		return false
@@ -51,10 +54,14 @@ func (u User) String() string {
 	return *u.Name + " (" + *u.Login + ")"
 }
 
+// Time wraps time.Time to provide a custom String method.
 type Time struct {
 	time.Time
 }
 
+// String formats the Time in a human-readable relative format.
+//
+// It implements the [fmt.Stringer] interface.
 func (d Time) String() string {
 	if d.IsZero() {
 		return "forever"
@@ -62,12 +69,14 @@ func (d Time) String() string {
 	return timeago.Convert(d.Time)
 }
 
+// Reaction wraps github.Reaction to provide additional methods.
 type Reaction struct {
 	User      User   `json:"user"`
 	Content   string `json:"content"`
 	CreatedAt Time   `json:"created_at"`
 }
 
+// Type returns a string representation of the reaction type.
 func (r Reaction) Type() string {
 	switch r.Content {
 	case "+1":
