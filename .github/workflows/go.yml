@@ -1,0 +1,30 @@
+---
+name: Go
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+jobs:
+  go-test-lint:
+    name: Go Test & Lint
+    permissions:
+      contents: read  # for actions/checkout to fetch code
+      pull-requests: read  # for golangci/golangci-lint-action to fetch pull requests
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout-action
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: stable
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: latest
+
+      - name: Run tests
+        run: go test
