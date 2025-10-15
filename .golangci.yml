@@ -62,6 +62,9 @@ linters:
     # Reports uses of functions with replacement inside the testing package.
     - usetesting
 
+    # Make sure exported struct functions are declared before unexported ones
+    - funcorder
+
   settings:
     revive:
       rules:
