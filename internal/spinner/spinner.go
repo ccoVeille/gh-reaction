@@ -24,12 +24,6 @@ func New(out io.Writer) *Spinner {
 	return s
 }
 
-// print prints the given string to the output, ensuring consistent width.
-func (s *Spinner) print(str string) {
-	s.maxChars = max(s.maxChars, len(str))
-	fmt.Fprintf(s.out, "%*s", s.maxChars, str)
-}
-
 // Start begins the spinner animation with the initial message.
 func (s *Spinner) Start(ctx context.Context, str string) {
 	s.print(str)
@@ -62,4 +56,10 @@ func (s *Spinner) Done(format string, args ...any) {
 	s.print("\r" + fmt.Sprintf(format, args...) + "\n")
 	close(s.done)
 	close(s.tick)
+}
+
+// print prints the given string to the output, ensuring consistent width.
+func (s *Spinner) print(str string) {
+	s.maxChars = max(s.maxChars, len(str))
+	fmt.Fprintf(s.out, "%*s", s.maxChars, str)
 }
