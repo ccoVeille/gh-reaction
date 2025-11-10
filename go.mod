@@ -2,13 +2,15 @@ module github.com/ccoVeille/gh-reaction
 
 go 1.25.0
 
-require github.com/cli/go-gh/v2 v2.12.2
+require (
+	github.com/cli/go-gh/v2 v2.13.0
+	github.com/google/go-github/v74 v74.0.0
+)
 
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/cli/safeexec v1.0.0 // indirect
 	github.com/cli/shurcooL-graphql v0.0.4 // indirect
-	github.com/google/go-github/v74 v74.0.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/henvic/httpretty v0.0.6 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
