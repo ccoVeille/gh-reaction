@@ -165,3 +165,10 @@ linters:
 
     misspell:
       locale: US
+
+  exclusions:
+    rules:
+      - path: internal/*
+        text: "should have comment .*or be unexported"
+        linters:
+          - revive

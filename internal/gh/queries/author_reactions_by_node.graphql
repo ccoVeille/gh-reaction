@@ -1,0 +1,25 @@
+query ($id: ID!, $last_reaction: Int!, $cursor: String) {
+  node(id: $id) {
+    ... on Reactable {
+      reactions(last: $last_reaction, before: $cursor) {
+        totalCount
+        pageInfo {
+          hasPreviousPage
+          startCursor
+        }
+        nodes {
+          content
+          createdAt
+          user {
+            __typename
+            login
+            ... on User {
+              name
+              isViewer
+            }
+          }
+        }
+      }
+    }
+  }
+}
