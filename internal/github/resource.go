@@ -4,31 +4,30 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/go-github/v74/github"
-
 	"github.com/ccoVeille/gh-reaction/internal/timeago"
 )
 
 // User wraps github.User to provide additional methods.
 type User struct {
-	github.User
+	Login    string `json:"login,omitempty"`
+	Name     string `json:"name,omitempty"`
+	Type     string `json:"__typename,omitempty"`
+	IsViewer bool   `json:"is_viewer,omitempty"`
 }
 
 // GitHubURL returns the URL to the user's GitHub profile.
 func (u User) GitHubURL() string {
-	if u.Login == nil {
-		return ""
-	}
-	return "https://github.com/" + *u.Login
+	return "https://github.com/" + u.Login
 }
 
 // IsBot reports whether the user is a bot account.
 func (u User) IsBot() bool {
-	if u.Login == nil {
-		return false
-	}
+	// TODO: consider using this field when available
+	// if u.Type == strings.ToLower("Bot") {
+	// 	return true
+	// }
 
-	switch strings.ToLower(*u.Login) {
+	switch strings.ToLower(u.Login) {
 	case
 		"coderabbitai[bot]",
 		"dependabot[bot]",
@@ -36,6 +35,7 @@ func (u User) IsBot() bool {
 		"renovate[bot]", // renovate is the old name for mend
 		"mend[bot]",     // mend is the new name for renovate
 		"codecov-commenter":
+
 		return true
 	}
 
@@ -43,15 +43,22 @@ func (u User) IsBot() bool {
 }
 
 func (u User) String() string {
-	if u.Login == nil {
+	if u.Login == "" {
 		return "unknown"
 	}
 
-	if u.Name == nil || *u.Name == "" || *u.Login == *u.Name {
-		return *u.Login
+	if u.Name == "" || u.Login == u.Name {
+		return u.Login
 	}
 
-	return *u.Name + " (" + *u.Login + ")"
+	return u.Login + " (" + u.Name + ")"
+}
+
+func (u User) PossessiveLabel() string {
+	if u.IsViewer {
+		return "your"
+	}
+	return u.String() + "'s"
 }
 
 // Time wraps time.Time to provide a custom String method.
@@ -78,10 +85,14 @@ type Reaction struct {
 
 // Type returns a string representation of the reaction type.
 func (r Reaction) Type() string {
-	switch r.Content {
-	case "+1":
+	switch strings.ToLower(r.Content) {
+	case
+		"+1",        // REST API representation
+		"thumbs_up": // GraphQL API representation
 		return "👍"
-	case "-1":
+	case
+		"-1",          // REST API representation
+		"thumbs_down": // GraphQL API representation
 		return "👎"
 	case "eyes":
 		return "👀"

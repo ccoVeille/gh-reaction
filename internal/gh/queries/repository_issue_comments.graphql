@@ -1,0 +1,55 @@
+query ($owner: String!, $name: String!, $last_reaction: Int!, $nb: Int!, $cursor: String) {
+  repository(owner: $owner, name: $name) {
+    issues(first: $nb, after: $cursor, orderBy: {field: CREATED_AT, direction: DESC}) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        id
+        comments(last: $nb) {
+          totalCount
+          pageInfo {
+            hasPreviousPage
+            startCursor
+          }
+          nodes {
+            id
+            body
+            author {
+              __typename
+              login
+              ... on User {
+                name
+                isViewer
+              }
+            }
+            createdAt
+            updatedAt
+            url
+            reactions(last: $last_reaction) {
+              totalCount
+              pageInfo {
+                hasPreviousPage
+                startCursor
+              }
+              nodes {
+                content
+                createdAt
+                user {
+                  __typename
+                  login
+                  ... on User {
+                    name
+                    isViewer
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -7,7 +7,7 @@ import (
 	"github.com/ccoVeille/gh-reaction/internal/timeago"
 )
 
-func TestConvertDuration(t *testing.T) {
+func TestConvert(t *testing.T) {
 	day := 24 * time.Hour
 	month := 30 * day
 	year := 365 * day
@@ -43,7 +43,7 @@ func TestConvertDuration(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		got := timeago.ConvertDuration(c.input)
+		got := timeago.Convert(time.Now().Add(-c.input))
 		if got != c.expected {
 			t.Errorf("Convert(%v) = %q, want %q", c.input, got, c.expected)
 		}

@@ -1,0 +1,49 @@
+query ($login: String!, $last_reaction: Int!, $nb: Int!, $cursor: String) {
+  user(login: $login) {
+    pullRequests(last: $nb, before: $cursor) {
+      totalCount
+      pageInfo {
+        hasPreviousPage
+        startCursor
+      }
+      nodes {
+        id
+        title
+        body
+        author {
+          __typename
+          login
+          ... on User {
+            name
+            isViewer
+          }
+        }
+        createdAt
+        updatedAt
+        url
+        repository {
+          nameWithOwner
+        }
+        reactions(last: $last_reaction) {
+          totalCount
+          pageInfo {
+            hasPreviousPage
+            startCursor
+          }
+          nodes {
+            content
+            createdAt
+            user {
+              __typename
+              login
+              ... on User {
+                name
+                isViewer
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
