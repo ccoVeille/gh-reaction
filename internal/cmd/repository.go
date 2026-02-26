@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ccoVeille/gh-reaction/internal/gh"
 	"github.com/spf13/cobra"
@@ -10,10 +11,10 @@ import (
 // NewRepositoryCmd creates and returns the repository subcommand
 func NewRepositoryCmd() *cobra.Command {
 	repoCmd := &cobra.Command{
-		Use:          "repository owner/repo",
+		Use:          "repository [owner/repo]",
 		Short:        "Analyze reactions on repository items",
 		Long:         "Analyze GitHub reactions on issues, PRs, and comments in a repository.",
-		Args:         cobra.ExactArgs(1),
+		Args:         cobra.MaximumNArgs(1),
 		RunE:         runRepositoryCmd,
 		SilenceUsage: true,
 	}
@@ -34,9 +35,17 @@ func runRepositoryCmd(cmd *cobra.Command, args []string) error {
 
 	var repo *gh.Repository
 
-	repo, err = gh.ParseRepositoryPath(args[0])
-	if err != nil {
-		return err
+	// Check for repository flag or argument
+	if len(args) > 0 {
+		repo, err = gh.ParseRepositoryPath(args[0])
+		if err != nil {
+			return err
+		}
+	} else {
+		repo, err = gh.CurrentRepository()
+		if err != nil {
+			return fmt.Errorf("use either a repository argument or run this command in a folder with a git repository: %w", err)
+		}
 	}
 
 	reactions, err := gh.QueryRepository(ctx, since, *repo)
