@@ -8,6 +8,7 @@ import (
 	"os"
 	"slices"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ccoVeille/gh-reaction/internal/gh/queries"
@@ -25,6 +26,12 @@ type PageInfo struct {
 
 func (p PageInfo) IsZero() bool {
 	return !p.HasNextPage && !p.HasPreviousPage
+}
+
+type RateLimit struct {
+	Cost      int `json:"cost"`
+	Remaining int `json:"remaining"`
+	Limit     int `json:"limit"`
 }
 
 type Reaction struct {
@@ -95,6 +102,12 @@ type resReaction struct {
 // ReactionResult exposes reaction data for consumers without exporting internals.
 type ReactionResult = resReaction
 
+// QueryResult contains the reactions and the GraphQL cost of the query.
+type QueryResult struct {
+	Reactions []ReactionResult
+	Cost      int64
+}
+
 type resNode struct {
 	TotalCount int      `json:"totalCount,omitempty"`
 	PageInfo   PageInfo `json:"pageInfo,omitzero"`
@@ -112,7 +125,8 @@ func (b Body) MarshalJSON() ([]byte, error) {
 }
 
 type resAPISingle struct {
-	User struct {
+	RateLimit RateLimit `json:"rateLimit"`
+	User      struct {
 		CommitComments               resNode `json:"commitComments,omitzero"`
 		IssueComments                resNode `json:"issueComments,omitzero"`
 		Issues                       resNode `json:"issues,omitzero"`
@@ -161,12 +175,14 @@ func (r *resAPISingle) extractByObjectType(requestType string, objType ObjectTyp
 }
 
 type resAPINodeReactions struct {
-	Node struct {
+	RateLimit RateLimit `json:"rateLimit"`
+	Node      struct {
 		Reactions Reactions `json:"reactions"`
 	} `json:"node"`
 }
 
 type resAPIRepoIssueComments struct {
+	RateLimit  RateLimit `json:"rateLimit"`
 	Repository struct {
 		Issues struct {
 			TotalCount int      `json:"totalCount,omitempty"`
@@ -179,6 +195,7 @@ type resAPIRepoIssueComments struct {
 }
 
 type resAPIRepoDiscussionComments struct {
+	RateLimit  RateLimit `json:"rateLimit"`
 	Repository struct {
 		Discussions struct {
 			TotalCount int      `json:"totalCount,omitempty"`
@@ -195,13 +212,14 @@ type requester struct {
 	author  string
 	minDate timeago.RelativeDate
 	spin    *spinner.Spinner
+	cost    atomic.Int64
 }
 
 // QueryUser fetches messages posted by the user using separate queries per post type
-func QueryUser(ctx context.Context, minDate timeago.RelativeDate, author string) ([]ReactionResult, error) {
+func QueryUser(ctx context.Context, minDate timeago.RelativeDate, author string) (QueryResult, error) {
 	clientGraphQL, err := api.DefaultGraphQLClient()
 	if err != nil {
-		return nil, err
+		return QueryResult{}, err
 	}
 
 	suffix := fmt.Sprintf("on github.com since %s", minDate.String())
@@ -265,7 +283,7 @@ func QueryUser(ctx context.Context, minDate timeago.RelativeDate, author string)
 		}
 	}
 	if len(errs) > 0 {
-		return nil, fmt.Errorf("errors fetching reactions: %v", errs)
+		return QueryResult{}, fmt.Errorf("errors fetching reactions: %v", errs)
 	}
 
 	// Collect results
@@ -288,7 +306,10 @@ func QueryUser(ctx context.Context, minDate timeago.RelativeDate, author string)
 		return 0
 	})
 
-	return allReactions, nil
+	return QueryResult{
+		Reactions: allReactions,
+		Cost:      req.cost.Load(),
+	}, nil
 }
 
 func (r *requester) fetchUserPostsReactions(
@@ -311,6 +332,8 @@ func (r *requester) fetchUserPostsReactions(
 		if err != nil {
 			return nil, err
 		}
+
+		r.cost.Add(int64(res.RateLimit.Cost))
 
 		nodes := res.extractByObjectType("user", objectType)
 		var hasRecentPosts bool
@@ -398,6 +421,8 @@ func (r *requester) fetchAllReactionsForNode(
 			return nil, err
 		}
 
+		r.cost.Add(int64(res.RateLimit.Cost))
+
 		reactions := res.Node.Reactions
 		if len(reactions.Nodes) == 0 {
 			break
@@ -415,10 +440,10 @@ func (r *requester) fetchAllReactionsForNode(
 }
 
 // QueryRepository fetches reactions on posts in a specific repository
-func QueryRepository(ctx context.Context, minDate timeago.RelativeDate, repo Repository) ([]ReactionResult, error) {
+func QueryRepository(ctx context.Context, minDate timeago.RelativeDate, repo Repository) (QueryResult, error) {
 	clientGraphQL, err := api.DefaultGraphQLClient()
 	if err != nil {
-		return nil, err
+		return QueryResult{}, err
 	}
 
 	suffix := fmt.Sprintf("in %s/%s since %s", repo.Owner, repo.Name, minDate.String())
@@ -492,7 +517,7 @@ func QueryRepository(ctx context.Context, minDate timeago.RelativeDate, repo Rep
 		}
 	}
 	if len(errs) > 0 {
-		return nil, fmt.Errorf("errors fetching reactions: %v", errs)
+		return QueryResult{}, fmt.Errorf("errors fetching reactions: %v", errs)
 	}
 
 	// Collect results
@@ -515,7 +540,10 @@ func QueryRepository(ctx context.Context, minDate timeago.RelativeDate, repo Rep
 		return 0
 	})
 
-	return allReactions, nil
+	return QueryResult{
+		Reactions: allReactions,
+		Cost:      req.cost.Load(),
+	}, nil
 }
 
 func (r *requester) fetchRepositoryItemsReactions(
@@ -540,6 +568,8 @@ func (r *requester) fetchRepositoryItemsReactions(
 		if err != nil {
 			return nil, err
 		}
+
+		r.cost.Add(int64(res.RateLimit.Cost))
 
 		nodes := res.extractByObjectType("repository", objectType)
 		var hasRecentPosts bool
@@ -631,6 +661,8 @@ func (r *requester) fetchRepositoryIssueCommentsReactions(
 			return nil, err
 		}
 
+		r.cost.Add(int64(res.RateLimit.Cost))
+
 		issues := res.Repository.Issues
 		var hasRecentPosts bool
 
@@ -717,6 +749,8 @@ func (r *requester) fetchRepositoryDiscussionCommentsReactions(
 			return nil, err
 		}
 
+		r.cost.Add(int64(res.RateLimit.Cost))
+
 		discussions := res.Repository.Discussions
 		var hasRecentPosts bool
 
@@ -775,4 +809,22 @@ func (r *requester) fetchRepositoryDiscussionCommentsReactions(
 	}
 
 	return reactions, nil
+}
+
+// FetchRateLimit fetches the current GraphQL API rate limit status
+func FetchRateLimit(ctx context.Context) (RateLimit, error) {
+	client, err := api.DefaultGraphQLClient()
+	if err != nil {
+		return RateLimit{}, err
+	}
+
+	var res struct {
+		RateLimit RateLimit `json:"rateLimit"`
+	}
+
+	if err := client.DoWithContext(ctx, queries.RateLimit, nil, &res); err != nil {
+		return RateLimit{}, err
+	}
+
+	return res.RateLimit, nil
 }

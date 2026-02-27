@@ -18,20 +18,17 @@ type postWithReactions struct {
 	MostRecentReaction time.Time
 }
 
-func renderReactions(since timeago.RelativeDate, reactions []gh.ReactionResult, emptyLabel string) {
-	fmt.Println()
+func renderReactions(since timeago.RelativeDate, result gh.QueryResult, emptyLabel string) {
 
-	if len(reactions) == 0 {
+	if len(result.Reactions) == 0 {
 		fmt.Println("Stats since", since)
-		fmt.Println(len(reactions), emptyLabel)
-		fmt.Println()
+		fmt.Println(len(result.Reactions), emptyLabel)
 		return
 	}
 
-	allReactions := buildReactions(reactions)
+	allReactions := buildReactions(result.Reactions)
 	allReactions.Clean()
 
-	fmt.Println()
 	fmt.Println("Posts with reactions (sorted by most recent reaction, oldest -> newest):")
 
 	postGroups := groupReactionsByPost(allReactions)

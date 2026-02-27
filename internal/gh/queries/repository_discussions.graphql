@@ -1,4 +1,7 @@
 query ($owner: String!, $name: String!, $last_reaction: Int!, $nb: Int!, $cursor: String) {
+  rateLimit {
+    cost
+  }
   repository(owner: $owner, name: $name) {
     discussions(first: $nb, after: $cursor, orderBy: {field: CREATED_AT, direction: DESC}) {
       totalCount
