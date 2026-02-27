@@ -1,4 +1,4 @@
-package cmd
+package app
 
 import (
 	"cmp"
@@ -36,7 +36,6 @@ func (pt PostType) String() string {
 	case PostTypeComment:
 		return "comment"
 	default:
-		// Fallback: replace underscores with spaces
 		return strings.ReplaceAll(string(pt), "_", " ")
 	}
 }
@@ -54,13 +53,11 @@ func (p Post) ContentPreview() string {
 	content := p.Content
 	for _, l := range strings.Split(content, "\n") {
 		if strings.HasPrefix(l, ">") {
-			// Skip quoted lines
 			continue
 		}
 
 		l = strings.TrimSpace(l)
 		if l == "" {
-			// Skip empty lines
 			continue
 		}
 
@@ -99,7 +96,6 @@ type Reactions []ReactionTo
 
 func (r *Reactions) Clean() {
 	clean := slices.DeleteFunc(*r, func(r1 ReactionTo) bool {
-		// filter out bot reactions
 		return r1.Reaction.User.IsBot()
 	})
 
@@ -122,7 +118,6 @@ func (v ValueCounts[T]) Top(nb int) ValueCounts[T] {
 		return nil
 	}
 
-	// Sort the values by count (descending)
 	slices.SortFunc(v, func(a, b ValueCount[T]) int {
 		if a.Count == b.Count {
 			return cmp.Compare(fmt.Sprint(a.Value), fmt.Sprint(b.Value))
@@ -131,7 +126,6 @@ func (v ValueCounts[T]) Top(nb int) ValueCounts[T] {
 		return b.Count - a.Count
 	})
 
-	// Return the top N values
 	if nb > len(v) {
 		nb = len(v)
 	}

@@ -22,9 +22,6 @@ func NewRootCmd() *cobra.Command {
 	userCmd := NewUserCmd()
 	repoCmd := NewRepositoryCmd()
 
-	addSinceFlagToCmd(userCmd)
-	addSinceFlagToCmd(repoCmd)
-
 	rootCmd.AddCommand(userCmd)
 	rootCmd.AddCommand(repoCmd)
 

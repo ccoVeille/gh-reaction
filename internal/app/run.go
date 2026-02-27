@@ -1,0 +1,98 @@
+package app
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/ccoVeille/gh-reaction/internal/gh"
+	"github.com/ccoVeille/gh-reaction/internal/timeago"
+)
+
+const DefaultSinceDaysAgo = 90
+
+func parseSinceFlag(sinceFlag string) (timeago.RelativeDate, error) {
+	var since timeago.RelativeDate
+
+	if sinceFlag == "" {
+		since = timeago.NewRelativeDate(time.Now().AddDate(0, 0, -DefaultSinceDaysAgo))
+	} else {
+		if err := since.Set(sinceFlag); err != nil {
+			return since, err
+		}
+	}
+
+	since.Time = since.Time.Truncate(time.Hour).UTC()
+	return since, nil
+}
+
+func RunUser(ctx context.Context, sinceFlag string, args []string) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	since, err := parseSinceFlag(sinceFlag)
+	if err != nil {
+		return err
+	}
+
+	var author string
+	if len(args) > 0 {
+		author = args[0]
+	} else {
+		client, err := gh.DefaultRESTClient()
+		if err != nil {
+			return err
+		}
+
+		var me struct {
+			Login string `json:"login"`
+		}
+
+		if err := client.Get(ctx, "user", &me); err != nil {
+			return err
+		}
+		author = me.Login
+	}
+
+	reactions, err := gh.QueryUser(ctx, since, author)
+	if err != nil {
+		return err
+	}
+
+	renderReactions(since, reactions, "messages with reactions")
+	return nil
+}
+
+func RunRepository(ctx context.Context, sinceFlag string, args []string) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	since, err := parseSinceFlag(sinceFlag)
+	if err != nil {
+		return err
+	}
+
+	var repo *gh.Repository
+
+	if len(args) > 0 {
+		repo, err = gh.ParseRepositoryPath(args[0])
+		if err != nil {
+			return err
+		}
+	} else {
+		repo, err = gh.CurrentRepository()
+		if err != nil {
+			return fmt.Errorf("use either a repository argument or run this command in a folder with a git repository: %w", err)
+		}
+	}
+
+	reactions, err := gh.QueryRepository(ctx, since, *repo)
+	if err != nil {
+		return err
+	}
+
+	renderReactions(since, reactions, "reactions on repository items")
+	return nil
+}
