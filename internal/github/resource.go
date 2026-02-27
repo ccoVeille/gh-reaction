@@ -101,7 +101,7 @@ func (r Reaction) Type() string {
 	case "laugh":
 		return "😂"
 	case "hooray":
-		return "🙌"
+		return "🎉"
 	case "confused":
 		return "😕"
 	case "rocket":
