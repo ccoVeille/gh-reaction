@@ -3,6 +3,9 @@ package queries
 import _ "embed"
 
 var (
+	//go:embed repository_releases.graphql
+	RepositoryReleases string
+
 	//go:embed repository_pull_requests.graphql
 	RepositoryPullRequests string
 
