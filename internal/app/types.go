@@ -18,6 +18,7 @@ type PostType string
 const (
 	PostTypeIssue        PostType = "issue"
 	PostTypePullRequest  PostType = "pull_request"
+	PostTypeRelease      PostType = "release"
 	PostTypeComment      PostType = "comment"
 	PostTypeIssueComment PostType = "issue_comment"
 	PostTypePRComment    PostType = "pull_request_comment"
@@ -33,6 +34,8 @@ func (pt PostType) String() string {
 		return "pull request"
 	case PostTypeIssue:
 		return "issue"
+	case PostTypeRelease:
+		return "release"
 	case PostTypeComment:
 		return "comment"
 	default:

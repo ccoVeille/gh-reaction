@@ -59,6 +59,7 @@ type Node struct {
 type NodeMetadata struct {
 	ID     string `json:"id"`
 	Title  string `json:"title,omitempty"`
+	Name   string `json:"name,omitempty"`
 	Body   Body   `json:"body,omitempty"`
 	Author struct {
 		Login    string `json:"login"`
@@ -85,6 +86,7 @@ type ObjectType string
 
 const (
 	ObjectTypePullRequest        ObjectType = "pull_request"
+	ObjectTypeRelease            ObjectType = "release"
 	ObjectTypePullRequestComment ObjectType = "pull_request_comment"
 	ObjectTypeIssue              ObjectType = "issue"
 	ObjectTypeIssueComment       ObjectType = "issue_comment"
@@ -137,6 +139,7 @@ type resAPISingle struct {
 	Repository struct {
 		Issues        resNode `json:"issues,omitzero"`
 		IssueComments resNode `json:"issueComments,omitzero"`
+		Releases      resNode `json:"releases,omitzero"`
 		PullRequests  resNode `json:"pullRequests,omitzero"`
 		Discussions   resNode `json:"discussions,omitzero"`
 	} `json:"repository"`
@@ -147,6 +150,8 @@ func (r *resAPISingle) extractByObjectType(requestType string, objType ObjectTyp
 		switch objType {
 		case ObjectTypePullRequest:
 			return r.Repository.PullRequests
+		case ObjectTypeRelease:
+			return r.Repository.Releases
 		case ObjectTypeIssue:
 			return r.Repository.Issues
 		case ObjectTypeIssueComment:
@@ -461,6 +466,7 @@ func QueryRepository(ctx context.Context, minDate timeago.RelativeDate, repo Rep
 	// Define post type configurations for repository
 	postTypes := map[ObjectType]string{
 		ObjectTypePullRequest:       queries.RepositoryPullRequests,
+		ObjectTypeRelease:           queries.RepositoryReleases,
 		ObjectTypeIssue:             queries.RepositoryIssues,
 		ObjectTypeDiscussion:        queries.RepositoryDiscussions,
 		ObjectTypeDiscussionComment: queries.RepositoryDiscussionComments,

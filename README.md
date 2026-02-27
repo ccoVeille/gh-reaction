@@ -22,7 +22,7 @@ This tool fills that gap by querying GitHub's GraphQL API to fetch all reactions
 
 ```console
 $ gh reaction
-A CLI tool to analyze GitHub reactions (emojis) on your or someone else's posts (issues, PRs, comments).
+A CLI tool to analyze GitHub reactions (emojis) on your or someone else's posts (issues, PRs, releases, comments).
 
 Usage:
   gh-reaction [command]

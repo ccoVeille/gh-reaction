@@ -72,6 +72,9 @@ func buildReactions(reactions []gh.ReactionResult) Reactions {
 	var allReactions Reactions
 	for _, reaction := range reactions {
 		content := string(reaction.Parent.Title)
+		if reaction.Type == gh.ObjectTypeRelease && reaction.Parent.Name != "" {
+			content += " " + reaction.Parent.Name
+		}
 		if content == "" {
 			content = string(reaction.Parent.Body)
 		}
@@ -99,7 +102,7 @@ func buildReactions(reactions []gh.ReactionResult) Reactions {
 					Type:     reaction.Parent.Author.Type,
 					IsViewer: reaction.Parent.Author.IsViewer,
 				},
-				Content: content,
+				Content: strings.TrimSpace(content),
 				Link:    reaction.Parent.URL,
 			},
 		})
