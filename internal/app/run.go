@@ -26,6 +26,15 @@ func parseSinceFlag(sinceFlag string) (timeago.RelativeDate, error) {
 	return since, nil
 }
 
+func displayAPIStats(ctx context.Context, result gh.QueryResult) {
+	fmt.Printf("\nGraphQL cost: %d", result.Cost)
+	rateLimit, err := gh.FetchRateLimit(ctx)
+	if err == nil {
+		fmt.Printf(" | Remaining: %d/%d", rateLimit.Remaining, rateLimit.Limit)
+	}
+	fmt.Println()
+}
+
 func RunUser(ctx context.Context, sinceFlag string, args []string) error {
 	if ctx == nil {
 		ctx = context.Background()
@@ -55,12 +64,14 @@ func RunUser(ctx context.Context, sinceFlag string, args []string) error {
 		author = me.Login
 	}
 
-	reactions, err := gh.QueryUser(ctx, since, author)
+	result, err := gh.QueryUser(ctx, since, author)
 	if err != nil {
 		return err
 	}
 
-	renderReactions(since, reactions, "messages with reactions")
+	displayAPIStats(ctx, result)
+	fmt.Println()
+	renderReactions(since, result, "messages with reactions")
 	return nil
 }
 
@@ -88,11 +99,13 @@ func RunRepository(ctx context.Context, sinceFlag string, args []string) error {
 		}
 	}
 
-	reactions, err := gh.QueryRepository(ctx, since, *repo)
+	result, err := gh.QueryRepository(ctx, since, *repo)
 	if err != nil {
 		return err
 	}
 
-	renderReactions(since, reactions, "reactions on repository items")
+	displayAPIStats(ctx, result)
+	fmt.Println()
+	renderReactions(since, result, "reactions on repository items")
 	return nil
 }

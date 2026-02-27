@@ -1,4 +1,7 @@
 query ($login: String!, $last_reaction: Int!, $nb: Int!, $cursor: String) {
+  rateLimit {
+    cost
+  }
   user(login: $login) {
     issueComments(last: $nb, before: $cursor) {
       totalCount

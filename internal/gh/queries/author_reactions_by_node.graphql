@@ -1,4 +1,7 @@
 query ($id: ID!, $last_reaction: Int!, $cursor: String) {
+  rateLimit {
+    cost
+  }
   node(id: $id) {
     ... on Reactable {
       reactions(last: $last_reaction, before: $cursor) {
