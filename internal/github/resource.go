@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ccoVeille/gh-reaction/internal/timeago"
+	"github.com/ccoveille/gh-reaction/internal/timeago"
 )
 
 // User wraps github.User to provide additional methods.

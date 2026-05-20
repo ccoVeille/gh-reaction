@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ccoVeille/gh-reaction/internal/gh"
-	"github.com/ccoVeille/gh-reaction/internal/github"
-	"github.com/ccoVeille/gh-reaction/internal/timeago"
+	"github.com/ccoveille/gh-reaction/internal/gh"
+	"github.com/ccoveille/gh-reaction/internal/github"
+	"github.com/ccoveille/gh-reaction/internal/timeago"
 )
 
 type postWithReactions struct {

@@ -11,9 +11,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ccoVeille/gh-reaction/internal/gh/queries"
-	"github.com/ccoVeille/gh-reaction/internal/spinner"
-	"github.com/ccoVeille/gh-reaction/internal/timeago"
+	"github.com/ccoveille/gh-reaction/internal/gh/queries"
+	"github.com/ccoveille/gh-reaction/internal/spinner"
+	"github.com/ccoveille/gh-reaction/internal/timeago"
 	"github.com/cli/go-gh/v2/pkg/api"
 )
 

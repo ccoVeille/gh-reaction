@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ccoVeille/gh-reaction/internal/timeago"
+	"github.com/ccoveille/gh-reaction/internal/timeago"
 )
 
 func TestConvert(t *testing.T) {

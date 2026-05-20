@@ -1,4 +1,4 @@
-module github.com/ccoVeille/gh-reaction
+module github.com/ccoveille/gh-reaction
 
 go 1.25.0
 
