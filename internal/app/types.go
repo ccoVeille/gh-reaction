@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ccoVeille/gh-reaction/internal/github"
-	"github.com/ccoVeille/gh-reaction/internal/timeago"
+	"github.com/ccoveille/gh-reaction/internal/github"
+	"github.com/ccoveille/gh-reaction/internal/timeago"
 )
 
 type PostType string

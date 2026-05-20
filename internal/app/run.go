@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ccoVeille/gh-reaction/internal/gh"
-	"github.com/ccoVeille/gh-reaction/internal/timeago"
+	"github.com/ccoveille/gh-reaction/internal/gh"
+	"github.com/ccoveille/gh-reaction/internal/timeago"
 )
 
 const DefaultSinceDaysAgo = 90

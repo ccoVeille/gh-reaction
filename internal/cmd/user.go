@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/ccoVeille/gh-reaction/internal/app"
+	"github.com/ccoveille/gh-reaction/internal/app"
 	"github.com/spf13/cobra"
 )
 

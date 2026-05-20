@@ -7,7 +7,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/ccoVeille/gh-reaction/internal/cmd"
+	"github.com/ccoveille/gh-reaction/internal/cmd"
 )
 
 func run() error {
